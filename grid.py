@@ -71,21 +71,6 @@ class Grid:
             #Grid.print_grid(g)
         return g
 
-    # @staticmethod
-    # def neighbours_of_colour(array, r, c, colour):
-    #     '''Returns a list of neighbours (r2, c2) of cell (r,c) such as
-    #     array[r2][c2] == colour
-    #     '''  
-    #     res = []
-    #     if r-1 >= 0 and array[r-1][c] == colour: 
-    #         res.append((r-1, c))
-    #     if r+1 < len(array) and array[r+1][c] == colour: 
-    #         res.append((r+1, c))
-    #     if c-1 >= 0 and array[r][c-1] == colour: 
-    #         res.append((r,c-1))
-    #     if c+1 < len(array[0]) and array[r][c+1] == colour: 
-    #         res.append((r,c+1))
-    #     return res
 
     def update_groups(self):
         '''Analyses the grid to compute the groups of cells
@@ -176,6 +161,33 @@ class Grid:
             assert dir != 'E' or cell.c + dc*dist < self.WIDTH
             assert dir != 'W' or cell.c - dc*dist >= 0
             self.shift(cell.r, cell.c, dir, dist)
+
+    def size_of_block_formed(self, r, c, dir, dist):
+        '''dir in {'N', 'S', 'E', 'W'}
+        Returns the size of the block that would be formed if 
+        self.array[r][c] was shifted of dist cells in direction dir
+
+        If it is equal to len(group_cells(r, c)), then the move is 
+        illegal, as it doesn't extend the block containing 
+        self.array[r][c]
+        '''
+        colour = self.array[r][c].colour
+        res = len(self.group_cells(r, c))
+        groups_considered = [self.array[r][c].group_id]
+        
+        dr, dc = Grid.deltas(dir)
+        r += dist * dr
+        c += dist * dc
+        for vr, vc in [(r+1, c), (r, c+1), (r-1, c), (r, c-1)]:
+            cell = self.array[vr][vc]
+            if (cell.colour == colour and 
+                    cell.group_id not in groups_considered):
+                groups_considered.append(cell.group_id)
+                res += len(self.group_cells(vr, vc))
+        return res
+
+
+
 
 if __name__ == '__main__':
 
