@@ -21,7 +21,6 @@ def rand_grid():
     while not test_ready(g):
         for i in range(HEIGHT):
             shuffle(g[i])
-        print_grid(g)
         if(test_ready(g)):
             return g
         for j in range(WIDTH):
@@ -29,7 +28,6 @@ def rand_grid():
             shuffle(c)
             for i in range(HEIGHT):
                 g[i][j] = c[i]
-        print_grid(g)
         if(test_ready(g)):
             return g
     return g
