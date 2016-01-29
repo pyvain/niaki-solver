@@ -71,24 +71,26 @@ class Grid:
             #Grid.print_grid(g)
         return g
 
-    @staticmethod
-    def neighbours_of_colour(array, r, c, colour):
-        '''Returns a list of neighbours (r2, c2) of cell (r,c) such as
-        array[r2][c2] == colour
-        '''  
-        res = []
-        if r-1 >= 0 and array[r-1][c] == colour: 
-            res.append((r-1, c))
-        if r+1 < len(array) and array[r+1][c] == colour: 
-            res.append((r+1, c))
-        if c-1 >= 0 and array[r][c-1] == colour: 
-            res.append((r,c-1))
-        if c+1 < len(array[0]) and array[r][c+1] == colour: 
-            res.append((r,c+1))
-        return res
+    # @staticmethod
+    # def neighbours_of_colour(array, r, c, colour):
+    #     '''Returns a list of neighbours (r2, c2) of cell (r,c) such as
+    #     array[r2][c2] == colour
+    #     '''  
+    #     res = []
+    #     if r-1 >= 0 and array[r-1][c] == colour: 
+    #         res.append((r-1, c))
+    #     if r+1 < len(array) and array[r+1][c] == colour: 
+    #         res.append((r+1, c))
+    #     if c-1 >= 0 and array[r][c-1] == colour: 
+    #         res.append((r,c-1))
+    #     if c+1 < len(array[0]) and array[r][c+1] == colour: 
+    #         res.append((r,c+1))
+    #     return res
 
     def update_groups(self):
         '''Analyses the grid to compute the groups of cells
+        Note that cells are stored in groups in a certain order thanks to 
+        a custom flooding order : from top to bottom and left to right
         '''
         self.groups = []
         copy = [[self.array[r][c].colour for c in range(Grid.WIDTH)] 
@@ -109,7 +111,10 @@ class Grid:
                         g.add(self.array[r][c])
                         self.array[r][c].group_id = group_id
                         copy[r][c] = flood_val
-                        queue.extend(Grid.neighbours_of_colour(copy, r, c, colour))
+                        if r+1 < Grid.HEIGHT and copy[r+1][c] == colour: 
+                            queue.insert(0, (r+1, c))
+                        if c+1 < Grid.WIDTH and copy[r][c+1] == colour: 
+                            queue.append((r,c+1))
 
                     self.groups.append(g)
                     flood_val -= 1
@@ -131,10 +136,9 @@ class Grid:
         return dr, dc
 
     def shift(self, r, c, dir, dist):
-        '''dir in {'N', 'S', 'E', 'O'}
+        '''dir in {'N', 'S', 'E', 'W'}
         Shifts cell self.array[r][c] of dist cells, in direction dir
         '''
-        print("Shifting ({},{}) of {},{}".format(r, c, dir, dist))
         dr, dc = Grid.deltas(dir)
 
         mem = self.array[r][c]
@@ -150,14 +154,22 @@ class Grid:
         self.array[r2][c2].c = c2 
 
     def raw_move(self, r, c, dir, dist):
-        '''dir in {'N', 'S', 'E', 'O'}
+        '''dir in {'N', 'S', 'E', 'W'}
         Shifts the whole group of the cell self.array[r][c] of dist cells,
         in direction dir
         '''
+        # cells are stored from left to right, and up to bottom in groups
+        # depending on the dir, the list must be browsed in a different way
+        # for instance, if the move is toward South, the cells of each 
+        # column must be considered from south to north, so the list must 
+        # be browsed in reverse
+        if dir in ['N', 'W']:
+            cells = self.group_cells(r, c)
+        else:
+            cells = reversed(self.group_cells(r, c)) 
 
-        for cell in self.group_cells(r, c):
-            print(cell)
-            print(self.group_cells(r, c))
+
+        for cell in cells:
             # Make sure the block won't get out the grid
             assert dir != 'N' or cell.r - dist < self.HEIGHT
             assert dir != 'S' or cell.r + dist >= 0
