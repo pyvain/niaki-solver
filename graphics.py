@@ -1,8 +1,10 @@
+#!/usr/bin/python3
 
+import sys
 try:
-    import Tkinter
+    import tkinter
 except ImportError:
-    raise ImportError, "The python-tk package is required to run this app" # python-imaging-tk
+    sys.stderr.write("The python-tk package is required to run this app\n") # python-imaging-tk
 from PIL import Image, ImageTk
 
 from rand_init import rand_grid
@@ -11,9 +13,9 @@ HEIGHT = 9
 WIDTH = 6
 NB_COLORS = 6
 
-class NiakiView(Tkinter.Tk):
+class NiakiView(tkinter.Tk):
     def __init__(self, g):
-        Tkinter.Tk.__init__(self, None)
+        tkinter.Tk.__init__(self, None)
         self.parent = None
         self.title("Niak niak niak...")
         self.g = g
@@ -24,7 +26,7 @@ class NiakiView(Tkinter.Tk):
     def initialize(self):
         self.tiles = [ImageTk.PhotoImage(Image.open("img/"+str(i)+".png").resize((64,64),Image.ANTIALIAS)) for i in range(NB_COLORS)]
         self.grid()
-        self.cells = [[Tkinter.Label(self, anchor="w", bg="white") for j in range(WIDTH)] for i in range(HEIGHT)]
+        self.cells = [[tkinter.Label(self, anchor="w", bg="white") for j in range(WIDTH)] for i in range(HEIGHT)]
         for i in range(HEIGHT):
             for j in range(WIDTH):
                 self.cells[i][j].grid(column=j,row=i,columnspan=1,sticky='EWNS')
@@ -37,7 +39,7 @@ class NiakiView(Tkinter.Tk):
 
 
 if __name__ == "__main__":
-    g = rand_grid()
-    #g = [[j for j in range(WIDTH)] for i in range(HEIGHT)]
+    #g = rand_grid()
+    g = [[j for j in range(WIDTH)] for i in range(HEIGHT)]
     NiakiView(g)
     NiakiView(g)
