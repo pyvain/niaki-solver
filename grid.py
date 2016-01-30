@@ -186,6 +186,24 @@ class Grid:
                 res += len(self.group_cells(vr, vc))
         return res
 
+    @staticmethod
+    def intern_move(grid, r, c, dir):
+        pass
+
+    def move(self, r, c, dir):
+        '''dir in {'N', 'S', 'E', 'W'}
+        Returns true if the move is legal and does it
+        Else, returns false
+        '''
+        pass
+
+    def move_copy(self, r, c, dir):
+        '''dir in {'N', 'S', 'E', 'W'}
+        If the move is legal, does it on a copy and returns it
+        Else, returns false
+        '''
+        pass
+
 
 
 
