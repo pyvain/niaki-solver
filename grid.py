@@ -16,6 +16,19 @@ class Group:
     def add(self, c):
         self.cells.append(c)
 
+class Move:
+    NORTH = 'N';
+    EAST = 'E';
+    SOUTH = 'S';
+    WEST = 'W';
+
+    def __init__(self, r, c, dir):
+        '''(r,c) is the origin of the swipe
+        dir is its direction (in {NORTH, SOUTH, EAST, WEST})
+        '''
+        self.r = r
+        self.c = c
+        self.dir = dir
 
 class Grid:
     HEIGHT = 9
@@ -26,53 +39,59 @@ class Grid:
         if array:
             self.array = array
         else:
-            self.array = Grid.rand_grid()
+            self.array = Grid.__rand_grid()
         for r in range(Grid.HEIGHT):
             for c in range(Grid.WIDTH):
                 self.array[r][c] = Cell(r, c, self.array[r][c], -1)
-        self.update_groups()
+        self.__update_groups()
 
     def print_grid(self):
         print("-----------")
         for l in self.array:
             print(l)
 
+    def group_cells(self, r, c):
+        '''Returns a list of cells in the group containing the cell
+        self.array[r][c]
+        '''
+        return self.groups[self.array[r][c].group_id].cells
+
     @staticmethod
-    def test_ready(g):
+    def __has_no_block(g):
         '''g must be a 2-D list, containing numbers
         Returns true if and only if any two adjacent cells have different colour
         ''' 
-        for i in range(Grid.HEIGHT):
-            for j in range(Grid.WIDTH):
-                for vi, vj in [(i+1,j), (i,j+1)]:
-                    if (0 <= vi and vi < Grid.HEIGHT and 0 <= vj 
-                            and vj < Grid.WIDTH and g[vi][vj] == g[i][j]):
+        for r in range(Grid.HEIGHT):
+            for c in range(Grid.WIDTH):
+                for vr, vc in [(r+1,c), (r,c+1)]:
+                    if (0 <= vr and vr < Grid.HEIGHT and 0 <= vc 
+                            and vc < Grid.WIDTH and g[vr][vc] == g[r][c]):
                         return False
         return True
 
     @staticmethod
-    def rand_grid():
+    def __rand_grid():
         '''Returns a 2-D self.HEIGHT*self.WIDTH list containing integers in [0, NB_COLORS[
         such as any two adjacent cells have different colours
         '''
         from random import shuffle
-        g = [[j for j in range(Grid.WIDTH)] for i in range(Grid.HEIGHT)]
-        while not Grid.test_ready(g):
-            for i in range(Grid.HEIGHT):
-                shuffle(g[i])
+        g = [[c for c in range(Grid.WIDTH)] for r in range(Grid.HEIGHT)]
+        while not Grid.__has_no_block(g):
+            for r in range(Grid.HEIGHT):
+                shuffle(g[r])
             #Grid.print_grid(g)
-            if Grid.test_ready(g):
+            if Grid.__has_no_block(g):
                 return g
-            for j in range(Grid.WIDTH):
-                c = [g[i][j] for i in range(Grid.HEIGHT)]
-                shuffle(c)
-                for i in range(Grid.HEIGHT):
-                    g[i][j] = c[i]
+            for c in range(Grid.WIDTH):
+                col = [g[r][c] for r in range(Grid.HEIGHT)]
+                shuffle(col)
+                for r in range(Grid.HEIGHT):
+                    g[r][c] = c[r]
             #Grid.print_grid(g)
         return g
 
 
-    def update_groups(self):
+    def __update_groups(self):
         '''Analyses the grid to compute the groups of cells
         Note that cells are stored in groups in a certain order thanks to 
         a custom flooding order : from top to bottom and left to right
@@ -105,14 +124,9 @@ class Grid:
                     flood_val -= 1
                     group_id += 1
 
-    def group_cells(self, r, c):
-        '''Returns a list of cells in the group containing the cell
-        self.array[r][c]
-        '''
-        return self.groups[self.array[r][c].group_id].cells
         
     @staticmethod
-    def deltas(dir):
+    def __deltas(dir):
         dr, dc = 0, 0
         if dir == 'N': dr = -1
         if dir == 'S': dr = 1
@@ -120,62 +134,81 @@ class Grid:
         if dir == 'W': dc = -1
         return dr, dc
 
-    def shift(self, r, c, dir, dist):
-        '''dir in {'N', 'S', 'E', 'W'}
-        Shifts cell self.array[r][c] of dist cells, in direction dir
-        '''
-        dr, dc = Grid.deltas(dir)
+    def __set_cell(self, r, c, cell):
+        '''Replaces self.array[r][c] by cell and
+        Returns a tuple t such as self.__set_cell(*t) reverses this action.'''
+        prev = self.array[r][c]
+        self.array[r][c] = cell
+        self.array[r][c].r = r
+        self.array[r][c].c = c
+        return (r, c, prev)
 
+    def __set_cells(self, l):
+        '''l must be a list of tuples (r, c, cell)
+        Calls __set_cell() on the elements of each tuple, from first 
+        to last, and returns a list l2 such as __set_cell(l2) reverses
+        this action.
+        '''
+        rev = []
+        for r, c, cell in l:
+            rev.add(0, self.__set_cell(r, c, cell))
+
+    def __cell_shift(self, r, c, dir, d):
+        '''Computes the operations needed to shift cell self.array[r][c]
+        of given distance d, in given direction dir
+        Returns them in a list l such as __set_cells(l) performs the shift
+        '''
+        dr, dc = Grid.__deltas(dir)
         mem = self.array[r][c]
-        r2, c2 = r, c
-        while r2 != (r + dist*dr) or c2 != (c + dist*dc):
-            self.array[r2][c2] = self.array[r2+dr][c2+dc]
-            self.array[r2][c2].r = r2
-            self.array[r2][c2].c = c2
-            r2 += dr
-            c2 += dc
-        self.array[r2][c2] = mem
-        self.array[r2][c2].r = r2
-        self.array[r2][c2].c = c2 
+        res = []        
+        for i in range(dist) :
+            cell = self.array[r+(i+1)*dr][c+(i+1)*dc]
+            res.append((r+i*dr, c+i*dc, cell))
+        res.append((r+dist*dr, r+dist*dc, mem))
+        return rev
 
-    def raw_move(self, r, c, dir, dist):
-        '''dir in {'N', 'S', 'E', 'W'}
-        Shifts the whole group of the cell self.array[r][c] of dist cells,
-        in direction dir
+
+    def __block_shift(self, r, c, dir, d):
+        '''Computes the operations needed to shift cell self.array[r][c]
+        of given distance d, in given direction dir, along with its block
+        Returns them in a list l such as __set_cells(l) performs the shift
+
+        Note that, shifting a block can be done by shifting its cells one 
+        by one, in a good order.
+        For example, if the direction of the shift is SOUTH, a cell of the 
+        block can be shifted only if cells of the same line that were south
+        of it have already been shifted.
+
+        And because cells of a group are stored up to bottom, left to right
+        This can be done by browsing the list in one way or the other
         '''
-        # cells are stored from left to right, and up to bottom in groups
-        # depending on the dir, the list must be browsed in a different way
-        # for instance, if the move is toward South, the cells of each 
-        # column must be considered from south to north, so the list must 
-        # be browsed in reverse
-        if dir in ['N', 'W']:
-            cells = self.group_cells(r, c)
-        else:
-            cells = reversed(self.group_cells(r, c)) 
-
+        res = []
+        cells = self.group_cells(r, c)
+        if dir in ['S', 'E']:
+            cells = reversed(cells)
 
         for cell in cells:
             # Make sure the block won't get out the grid
-            assert dir != 'N' or cell.r - dist < self.HEIGHT
-            assert dir != 'S' or cell.r + dist >= 0
-            assert dir != 'E' or cell.c + dc*dist < self.WIDTH
-            assert dir != 'W' or cell.c - dc*dist >= 0
-            self.shift(cell.r, cell.c, dir, dist)
+            assert dir != 'N' or cell.r - d < self.HEIGHT
+            assert dir != 'S' or cell.r + d >= 0
+            assert dir != 'E' or cell.c + dc*d < self.WIDTH
+            assert dir != 'W' or cell.c - dc*d >= 0
+            res.extend(self.__cell_shift(cell.r, cell.c, dir, d))
+        return res
 
-    def size_of_block_formed(self, r, c, dir, dist):
-        '''dir in {'N', 'S', 'E', 'W'}
-        Returns the size of the block that would be formed if 
-        self.array[r][c] was shifted of dist cells in direction dir
+    def __size_of_block_formed(self, r, c, dir, d):
+        '''Returns the size of the block that would be formed if 
+        self.__block_shift(r, c, dir, d) was performed
 
-        If it is equal to len(group_cells(r, c)), then the move is 
-        illegal, as it doesn't extend the block containing 
+        Note that if it is equal to len(self.group_cells(r, c)), then 
+        the move is illegal, as it doesn't extend the block containing 
         self.array[r][c]
         '''
         colour = self.array[r][c].colour
         res = len(self.group_cells(r, c))
         groups_considered = [self.array[r][c].group_id]
         
-        dr, dc = Grid.deltas(dir)
+        dr, dc = Grid.__deltas(dir)
         r += dist * dr
         c += dist * dc
         for vr, vc in [(r+1, c), (r, c+1), (r-1, c), (r, c-1)]:
@@ -186,18 +219,19 @@ class Grid:
                 res += len(self.group_cells(vr, vc))
         return res
 
+
     @staticmethod
-    def intern_move(grid, r, c, dir):
+    def intern_move(grid, m):
         pass
 
-    def move(self, r, c, dir):
+    def move(self, m):
         '''dir in {'N', 'S', 'E', 'W'}
         Returns true if the move is legal and does it
         Else, returns false
         '''
         pass
 
-    def move_copy(self, r, c, dir):
+    def move_copy(self, m):
         '''dir in {'N', 'S', 'E', 'W'}
         If the move is legal, does it on a copy and returns it
         Else, returns false
