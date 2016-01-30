@@ -26,7 +26,9 @@ class NiakiView(tkinter.Tk):
     def initialize(self):
         self.tiles = [ImageTk.PhotoImage(Image.open("img/"+str(i)+".png").resize((64,64),Image.ANTIALIAS)) for i in range(NB_COLORS)]
         self.grid()
-        self.cells = [[tkinter.Label(self, anchor="w", bg="white") for j in range(WIDTH)] for i in range(HEIGHT)]
+        #self.cells = [[tkinter.Label(self, anchor="w", bg="white") for j in range(WIDTH)] for i in range(HEIGHT)]
+        #Button(master, text="OK", command=callback)
+        self.cells = [[tkinter.Button(self, anchor="w", bg="white") for j in range(WIDTH)] for i in range(HEIGHT)]
         for i in range(HEIGHT):
             for j in range(WIDTH):
                 self.cells[i][j].grid(column=j,row=i,columnspan=1,sticky='EWNS')
